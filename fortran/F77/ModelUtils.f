@@ -70,13 +70,13 @@ Cf2py intent(out) ierr
      $  np
 
       parameter
-     $  (np = 10000)
+     $  (np = 16384)
 
       integer
      $  ierr, seed, nparam, i
 
       real*8
-     $  param(*), inc, proba(0:np), inctab(0:np), random, func,
+     $  param(10), inc, proba(0:np), inctab(0:np), random, func,
      $  incmin, incmax, ran_3, interp
 
       logical
@@ -151,13 +151,13 @@ Cf2py intent(out) ierr
      $  np, nd
 
       parameter
-     $  (np = 10000, nd = 10)
+     $  (np = 16384, nd = 10)
 
       integer
      $  ierr, seed, nparam, i, dist, di
 
       real*8
-     $  param(*), inc, proba(0:np,nd), inctab(0:np,nd), random, func,
+     $  param(10), inc, proba(0:np,nd), inctab(0:np,nd), random, func,
      $  incmin, incmax, ran_3, interp
 
       logical
@@ -220,6 +220,39 @@ Cf2py intent(in) params
 
       Variably_tapered = 10.d0**(params(3)*3.d0*(h-params(1))/5.d0)
      $     *exp(-10.d0**(-params(4)*3.d0*(h-params(2))/5.d0))
+
+      return
+      end
+
+      real*8 function Variably_tapered_diff(h, params)
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c This routine returns the differential number of objects at mag H per unit
+c mag following an exponentially tapered exponential with parameters in
+c params.
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c
+c J-M. Petit  Observatoire de Besancon
+c Version 1 : August 2023
+c
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c INPUT
+c     seed  : Random number generator seed (I4)
+c     params: parameters for the distribution (4*R8)
+c
+c OUTPUT
+c     Variably_tapered_diff : Random value of H (R8)
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+cf2py intent(in) h
+cf2py intent(in) params
+      implicit none
+
+      real*8 params(4), h
+
+      Variably_tapered_diff = (log(10.0d0)*3.0d0/5.0d0)
+     $  *10.0d0**(params(3)*3.0d0*(h-params(1))/5.0d0)
+     $  *(params(3) + params(4)
+     $  *10.0d0**(-params(4)*3.0d0*(h-params(2))/5.0d0))
+     $  *exp(-10.0d0**(-params(4)*3.0d0*(h-params(2))/5.0d0))
 
       return
       end
@@ -624,7 +657,7 @@ Cf2py intent(in,out) seed
       data h_min /-1.d0/
       data sl1 /0.13d0/, sl2 /0.6d0/
       data h1 /3.2d0/, h2 /6.d0/, n1 /3.d0/
-      data scale /2.0d0/
+      data scale /2.2d0/
 
       if (first) then
          h_max = hparam(nparam)
@@ -667,6 +700,88 @@ c for the appropriate formula.
       random = ran_3(seed)
       H_dist_hot_3 = interp(proba, htab, random, np+1)
 
+      return
+      end
+
+      real*8 function H_dist_hot_4(nparam, hparam, h)
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c This routine returns the unnormalized H "probability" density, as a variably
+c tapered exponential, with 2 sequential exponential slopes at the bright end,
+c and possibly a knee/divot followed by a single exponential slope at the faint
+c end.
+c This version provides a continuous differential function, except for the divot.
+c
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c
+c J-M. Petit  Observatoire de Besancon
+c Version 1 : August 2023
+c
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c INPUT
+c     nparam: Number of parameters (I4)
+c     hparam: Parameters for asymptotic slope(s) (n*R8)
+c             hparam(1): start of asymptote
+c             hparam(2): contrast at start of asymptote
+c             hparam(3): slope of asymptote
+c             hparam(4): end of asymptote
+c     h     : Absolute magnitude H [mag] (R8)
+c
+c OUTPUT
+c     H_dist_hot_4 : Value of the probability (R8)
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+cf2py intent(in) nparam
+cf2py intent(in), depend(nparam) :: param
+cf2py intent(in) h
+      implicit none
+
+      integer*4 nparam
+      real*8 hparam(10), h
+      real*8 params(4), h_min, h_max
+      real*8 a1, a2, a3, sl1, sl2, sl3, h1, h2, h3, scale
+      logical first
+      real*8 Variably_tapered_diff
+      external Variably_tapered_diff
+      save
+
+      data first /.true./
+      data params /-2.6d0, 8.1d0, 0.666d0, 0.42d0/
+      data h_min /-1.d0/
+      data sl1 /0.13d0/, sl2 /0.6d0/
+      data h1 /3.2d0/, h2 /6.d0/
+      data scale /2.2d0/
+
+      if (first) then
+         h_max = hparam(nparam)
+         h3 = hparam(1)
+         a2 = scale*Variably_tapered_diff(h2, params)
+         a3 = hparam(2)*scale*Variably_tapered_diff(h3, params)
+         sl3 = hparam(3)
+         a1 = a2*10.0d0**(sl2*(h1-h2))
+c The normalisation is done with the exponentially tapered exponential,
+c as fitted on the OSSOS cold component, then scaled by 2. This
+c determines the normalisation of the exponential between H = h2
+c and H = h1
+c N(<H) = n2*10**(sl2*(H-h2))
+c Then, there is an excess divot at h1. See
+c [[file:///home/petit/Research/OSSOS/tes/OSSOSpapers/Papers/GlobalLuminosityFunction/CumDiffDistributions.org]]
+c for the appropriate formula.
+         first = .false.
+      end if
+
+      if (h .le. h_min) then
+         H_dist_hot_4 = 0.0d0
+      else if (h .le. h1) then
+         H_dist_hot_4 = a1*10.0d0**(sl1*(h-h1))
+      else if (h .le. h2) then
+         H_dist_hot_4 = a2*10.0d0**(sl2*(h-h2))
+      else if (h .le. h3) then
+         H_dist_hot_4 = scale*Variably_tapered_diff(h, params)
+      else if (h .le. h_max) then
+         H_dist_hot_4 = a3*10.0d0**(sl3*(h-h3))
+      else
+         H_dist_hot_4 = 0.0d0
+      end if
+    
       return
       end
 
@@ -1649,6 +1764,284 @@ c range ]H_{k-1}; H_k]. 'random' needs to be rescaled to go to 1.
          end if
       end do
 
+      end
+
+      real*8 function scat_a (seed, np, p)
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c This routine draws randomly a number according to the scattering a
+c distribution, represented by 2 logarythms with parameterss I can adjust.
+c The first values have been eye-balled on the scattering a distribution.
+c
+c the cumulative probability of $a$ is
+c \begin{eqnarray}
+c P(a) & = & A_1 + \beta_1 Log{(a)} \qquad {\rm for} \qquad a < a_b \\
+c P(a) & = & A_2 + \beta_2 Log{(a)} \qquad {\rm for} \qquad a \ge a_b
+c \end{eqnarray}
+c where $a_b$ and $P_b = P(a_b)$ define the break and are given/adjusted $a_b = 100$
+c and $P_b = 0.8$. Next, we can either define the maximum value of $a$ where $P =
+c 1$ and the minimum $a$ where $P$ is the minimumvalue corresponding to 1
+c occurance. Similarly, one can give the values of $\beta_1$ and $\beta_2$.
+c It makes more sense to give $a_{mini}$ and $a_{maxi}$ and deduce $\beta_1$ and $\beta_2$.
+c \begin{eqnarray}
+c \beta_2 & = & \frac{P_b - 1}{\Log{(a_b/a_{maxi})} \\
+c \beta_1 & = & \frac{P_b}{\Log{(a_b/a_{mini})}
+c \end{eqnarray}
+c This will set the values of $A_1$ and $A_2$ with $a_b$ and $P_b$.
+c \begin{eqnarray}
+c A_1 & = & P_b - \beta_1 \Log{(a_b)} \\
+c A_2 & = & P_b - \beta_2 \Log{(a_b)}
+c \end{eqnarray}
+c One first draws $P$ uniformly in [0; 1], then computes $a$ from
+c \begin{eqnarray}
+c a & = & 10^{\frac{P - A_1}{\beta_1}} \qquad {\rm for} \qquad P < P_b \\
+c a & = & 10^{\frac{P-A_2}{\beta_2}} \qquad {\rm for} \qquad P \ge P_b
+c \end{eqnarray}
+c
+c Actually, once debiased, it turns out that it could be a single slope
+c distribution. I'll keep the 2-slope shape, but set the parameters so it's
+c like a single slope distribution.
+c
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c
+c J-M. Petit  Observatoire de Besancon
+c Version 1 : August 2023
+c
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c INPUT
+c     seed  : Random number generator seed (I4)
+c     np    : Number of parameters (I4)
+c     p     : Parameters for distribution (n*R8)
+c             p(1): break point $a_p$
+c             p(2): cumulative proba at break, $P_b$
+c             p(3): minimum value of a
+c             p(4): maximum value of a
+c
+c OUTPUT
+c     scat_a : Random value of a (R8)
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+cf2py intent(in,out) seed
+cf2py intent(in) np
+cf2py intent(in) p
+      implicit none
+
+      integer*4 seed
+      integer*4 np
+      real*8 p(*)
+      integer*4 i
+      real*8 ab, pb, amini, amaxi, b1, b2, A1, A2, lab
+      real*8 random
+      logical first
+      real*8 ran_3
+      external ran_3
+      save
+
+      data ab /700.0d0/, pb /1.0d0/, amini /30.0d0/, amaxi /705.0d0/
+      data first /.true./
+
+      if (first) then
+         if (np .ge. 1) then
+            ab = p(1)
+         end if
+         if (np .ge. 2) then
+            pb = p(2)
+         end if
+         if (np .ge. 3) then
+            amini = p(3)
+         end if
+         if (np .ge. 4) then
+            amaxi = p(4)
+         end if
+         lab = log10(ab)
+         b1 = pb/(lab-log10(amini))
+         A1 = pb - b1*lab
+         b2 = (pb-1.0d0)/(lab-log10(amaxi))
+         A2 = pb - b2*lab
+c       print *, 'Scat_a'
+c       print *, ab, pb, amini, amaxi
+c       print *, b1, A1, b2, A2
+c       print *, 10.0**((0.0d0-A1)/b1), 10.0**((0.5d0-A1)/b1), 10.0**((0.9999d0-A1)/b1)
+         first = .false.
+      end if
+
+      random=ran_3(seed)
+      if (random .le. pb) then
+         scat_a = 10.0**((random-A1)/b1)
+      else
+         scat_a = 10.0**((random-A2)/b2)
+      end if
+
+      return
+      end
+
+      real*8 function scat_a_2 (seed, np, p)
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c This routine draws randomly a number according to the scattering a
+c distribution, represented by a power-law of the shifted semimajor axis.
+c The first parameter values have been eye-balled on the scattering a distribution.
+c
+c the cumulative probability of $a$ is
+c \begin{displaymath}
+c P(a) = \left(\frac{a - a_{min}}{a_{max} - a_{min}}\right)^\alpha
+c \end{displaymath}
+c where $a_{min}$ and $a_{max}$ are the smallest and largest semimajor axis
+c and $\alpha$ is the index that will set the global shape.
+c 
+c Once a probablity $P(a)$ is drawn in [0; 1], one can easily obtain $a$ with:
+c \begin{displaymath}
+c a = a_{min}} + (a_{max} - a_{min})P(a)^{1/\alpha}
+c \end{displaymath}
+c
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c
+c J-M. Petit  Observatoire de Besancon
+c Version 1 : August 2023
+c
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c INPUT
+c     seed  : Random number generator seed (I4)
+c     np    : Number of parameters (I4)
+c     p     : Parameters for distribution (n*R8)
+c             p(1): break point $a_p$
+c             p(2): cumulative proba at break, $P_b$
+c             p(3): minimum value of a
+c             p(4): maximum value of a
+c
+c OUTPUT
+c     scat_a_2: Random value of a (R8)
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+cf2py intent(in,out) seed
+cf2py intent(in) np
+cf2py intent(in) p
+      implicit none
+
+      integer*4 seed
+      integer*4 np
+      real*8 p(*)
+      integer*4 i
+      real*8 amini, amaxi, alpha, al1
+      real*8 random
+      logical first
+      real*8 ran_3
+      external ran_3
+      save
+
+      data amini /30.0d0/, amaxi /700.0d0/, alpha /0.5d0/
+      data first /.true./
+
+      if (first) then
+         if (np .ge. 1) then
+            amini = p(1)
+         end if
+         if (np .ge. 2) then
+            amaxi = p(2)
+         end if
+         if (np .ge. 3) then
+            alpha = p(3)
+         end if
+         al1 = 1.0d0/alpha
+c       print *, 'Scat_a_2'
+c       print *, amini, amaxi, alpha
+c       print *, al1
+         first = .false.
+      end if
+
+      random=ran_3(seed)
+      scat_a_2 = amini + (amaxi - amini)*random**al1
+
+      return
+      end
+
+      real*8 function scat_q (seed, np, p, a)
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c This routine draws randomly a number according to the scattering q
+c distribution, represented by 2 logarythms with parameterss I can adjust.
+c The first values have been eye-balled on the scattering a distribution.
+c
+c the extend of the $q$ distribution depends on $a$. So we first
+c scale according to $a$. The minimum value of $q$ is $q_{min} = 10$. The maximum
+c value of $q$ is $q_{max} \propto a^\alpha$. From the detectiosn, I determined $a_1
+c = 43$ corresponds to $q_1 = 33$ and $a_2 = 425$ coresponds to $q_2 = 46$. This
+c sets $\alpha$ (which could be adjusted) and then the proportionnality factor. now
+c I define a variable that runs in [0; 1]:
+c \begin{displaymath}
+c \frac{xq - xq_0}{xq_1 - xq_0}= \frac{q-q_0}{q_1 \left(\frac{a}{a_1}\right)^\alpha - q_0}
+c \end{displaymath}
+c where $xq_0 = 0$, $xq_1 = 1$, $q_0 = q_{min}$. Now, the distribution of $xq$ looks
+c like an exponential. So I can set $\Log{(P)} = a \times xq + b$ where $P$ is tyhe
+c cumulative probability. We have $P(xq=1) = 1$, thus $b = -a$. In this way,
+c $P$ varies from $10^a = A^{}$ to 1. So I introduce anothere variable $\Chi =
+c \frac{P - A}{1 - A}$, or inversly $P = (1 - A) \Chi + A$.
+c
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c
+c J-M. Petit  Observatoire de Besancon
+c Version 1 : August 2023
+c
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+c INPUT
+c     seed  : Random number generator seed (I4)
+c     np    : Number of parameters (I4)
+c     p     : Parameters for distribution (n*R8)
+c             p(1): break point $a_p$
+c             p(2): cumulative proba at break, $P_b$
+c             p(3): slope below break, $\beta_1$
+c             p(4): slope above break, $\beta_2$
+c     a     : Value of semimajor axis
+c
+c OUTPUT
+c     scat_q : Random value of q (R8)
+c-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+cf2py intent(in,out) seed
+cf2py intent(in) np
+cf2py intent(in) p
+cf2py intent(in) a
+      implicit none
+
+      integer*4 seed
+      integer*4 np
+      real*8 p(*), a
+      integer*4 i
+      real*8 random, a1, q1, a2, q2, alpha, al, AA, pq, xq, qmax, qmin
+      logical first
+      real*8 ran_3
+      external ran_3
+      save
+
+      data al /1.3d0/, a1 /43.0d0/, q1 /33.0d0/, a2 /425.0d0/, q2
+     $  /46.0d0/, qmin /10.0d0/
+      data first /.true./
+
+      if (first) then
+         if (np .ge. 1) then
+            al = p(1)
+         end if
+         if (np .ge. 2) then
+            a1 = p(2)
+         end if
+         if (np .ge. 3) then
+            q1 = p(3)
+         end if
+         if (np .ge. 4) then
+            a2 = p(4)
+         end if
+         if (np .ge. 5) then
+            q2 = p(5)
+         end if
+         if (np .ge. 6) then
+            qmin = p(6)
+         end if
+         AA = 10.0**(-al)
+         alpha = log10(q1/q2)/log10(a1/a2)
+         first = .false.
+      end if
+
+      qmax = q1*(a/a1)**alpha
+      random=ran_3(seed)
+      pq = (1 - AA)*random + AA
+      xq = 1.0d0 + log10(pq)/al
+      scat_q = xq*(qmax - qmin) + qmin
+
+      return
       end
 
       real*8 function qhot (np, p, q)

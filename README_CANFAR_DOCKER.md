@@ -5,7 +5,7 @@ To run the SSim on CANFAR we need to make a `docker` container.  There are `dev`
 
 ## Testing/Development build and run
 To build a development version of the container that you will run locally to ensure everything is working.  
-You can also use this conatiner to run SSim analysis locally.
+You can also use this container to run SSim analysis locally.
 ```
 make dev
 docker run --user testuser --interactive --tty --ip 0.0.0.0 --rm --env DISPLAY=host.docker.internal:0 images.canfar.net/uvickbos/ssim:python xterm -fg white -bg black -title ssim:python
@@ -21,7 +21,8 @@ To use the above testuser on OS-X requires having X11 running. On OS-X do the fo
 
 ## Production
 
-This is the version we will load to `images.canfar.net`.  The `make` command builds the production versionof the container and pushes to `CANFAR` 
+This is the version we will load to `images.canfar.net`.  The `make` command
+builds the production version of the container and pushes to `CANFAR` 
 You may need to do a `docker login` before running this build step, see https://github.com/opencadc/skaha/tree/master/skaha-containers#publishing
 
 To make a release to `canfar.net` run in deploy mode.

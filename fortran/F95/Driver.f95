@@ -4,7 +4,7 @@ program Driver
 ! File Driver.f95
 !
 ! J.-M. Petit  Observatoire de Besac
-! Version 1 :  May 2013
+! Version 1:  May 2013
 !
 ! The purpose of this program is to compare models of the Kuiper Belt to
 ! reality by actually comparing what the surveys (say CFEPS or OSSOS)
@@ -94,9 +94,9 @@ program Driver
   open (unit=lun_t, file=trk_outfile, status='new', err=9501)
 
 ! copy header of model file into trk and detect files
-  open (unit=12, file=distri_file, status='old', err=9503)
+  open (unit=90, file=distri_file, status='old', err=9503)
 222 continue
-  read (12, '(a)', err=9999) line
+  read (90, '(a)', err=9999) line
   if ( line(1:1) .eq. '#' ) then
      !    don't write out if this is the header line.. hack.
      if (index(line, 'peri') .eq. 0) then 
@@ -105,7 +105,7 @@ program Driver
      endif
      goto 222
   endif
-  close (12)
+  close (90)
 
   write (lun_h, '(''# Seed: '', i10)') seed
   write (lun_h, '(''#'')')
@@ -131,7 +131,7 @@ program Driver
        //time(1:2)//':'//time(3:4)//':'//time(5:10), zone
   write (lun_t, '(a,a)') &
        '#   a           e        i      Node     peri       M       H_int     ', &
-       '   q      r       delta  h_rand m_rand color Comments'
+       '   q      r       delta  m_rand h_rand color Comments'
 
 ! Initialize counters
   n_hits = 0
