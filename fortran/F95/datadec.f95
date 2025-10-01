@@ -4,7 +4,7 @@ module datadec
 
   ! define length of array parameters
   integer, parameter :: n_sur_max = 200, n_bin_max=30, n_r_max=10, &
-       nw_max = 10, nsites_max = 400
+       nw_max = 10, nsites_max = 2000
 
   ! define some useful constants
   real (kind=8), parameter :: Pi = 3.141592653589793238d0, drad = Pi/180.0D0, &
