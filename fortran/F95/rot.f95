@@ -1058,7 +1058,7 @@ contains
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
 ! INPUT
 !     jd    : JD in UTC, assimilated to UT1 (days) (R8)
-!     longit: West longitude of position (decimal degree) (R8)
+!     longit: West longitude of position (decimal hour - 0-24h) (R8)
 !
 ! OUTPUT
 !     lst   : Local sidereal time (0-24h) (R8)

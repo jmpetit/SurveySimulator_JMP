@@ -13,7 +13,7 @@ if [ -f SimulTrack.dat ]; then
     \rm SimulTrack.dat
 fi
 
-${src_dir}/Driver < ${cmd}.in
+time ${src_dir}/Driver < ${cmd}.in
 if [ $? != 0 ]; then
   status=$?
   echo "================================================================="

@@ -122,7 +122,7 @@ contains
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
 ! This routine returns the cartesian coordinates of the observatory
 ! with respect to the geocenter, at time t.
-! Returns cartisian coordiantes.
+! Returns cartisian coordinates.
 ! Reference frame : ICRF
 ! Units : AU
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
@@ -169,9 +169,9 @@ contains
        stop 1
     end if
 
-    obslon = sitelist(i)%lon
-    obslat = sitelist(i)%lat
-    obsalt = sitelist(i)%altitude
+    obslon = sitelist(i)%lon       ! decimal hour (0-24h)
+    obslat = sitelist(i)%lat       ! radian
+    obsalt = sitelist(i)%altitude  ! m
 
     obslmst = lst(t, obslon)
     call topo (obslmst/12.0d0*Pi, obslat, obsalt, pos)

@@ -17,7 +17,7 @@ $(MODELS): clean binEphem.DE
 .PHONY: clean
 
 clean:
-	\rm -f ModelUsed.dat SimulDetect.dat SimulTrack.dat LOG test
+	\rm -f ModelUsed.dat SimulDetect.dat SimulTrack.dat LOG test binEphem.DE
 
 binEphem.DE:
 	\rm -f binEphem.DE

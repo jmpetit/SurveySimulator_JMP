@@ -9,7 +9,7 @@ contains
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
 ! PLEPH is using lun = 12 to access the ephemerides file.
 !
-! DO NOT USE LUN + 12 IN FILE ACCESS IN YOUR PROGRAM
+! DO NOT USE LUN = 12 IN FILE ACCESS IN YOUR PROGRAM
 !
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
 

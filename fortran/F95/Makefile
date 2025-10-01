@@ -1,4 +1,5 @@
-U	= poly_dec poly_lib datadec ioutils effut elemutils rot DE_size DE_const DE_chrhdr DE_ephhdr DE_utils xvutils getsur numutils surveysub
+U	= poly_dec poly_lib datadec ioutils effut elemutils rot xvutils getsur numutils surveysub 
+#U	= poly_lib effut getsur numutils surveysub
 OBJU	= $(addsuffix .o,${U})
 SRCU	= $(addsuffix .f95,${U})
 FPPU	= $(addsuffix .fpp,${U})
@@ -29,9 +30,9 @@ FFLAGP	= -O3
 CFLAGS  = 
 CPPFLAGS = 
 
+SUBDIRS := example
 TOPTARGETS := clean test
-# use the GIMEOBJ from the command line or the default value of InnerHotModel
-GIMEOBJ ?= InnerHotModel
+GIMEOBJ ?= InnerBeltModel
 
 $(TOPTARGETS): $(SUBDIRS)
 
@@ -41,9 +42,6 @@ $(SUBDIRS):
 	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 all:	Driver $(SUBDIRS)
-
-test: 
-	$(MAKE) -s -C ../tests test LANGUAGE=F95
 
 %.fpp :	%.f95
 	$(FPP) $< -o $@
@@ -71,9 +69,18 @@ link:
 Driver: link Driver.f95 $(OBJU) ${SRCM} Makefile
 	$(FC) $(FFLAGP) -o Driver $(OBJU) ${SRCM} Driver.f95
 
+DriverPop: link DriverPop.f95 $(OBJU) ${SRCM} Makefile
+	$(FC) $(FFLAGP) -o DriverPop $(OBJU) ${SRCM} DriverPop.f95
+
+#	rm GiMeObj.f95
+
 magerr: link magerr.f95 $(OBJU) ${SRCM} Makefile
 	$(FC) $(FFLAGP) -o magerr $(OBJU) ${SRCM} magerr.f95
 	rm GiMeObj.f95
+
+# No longer build a GOBJ module, GiMeObj is written in Python
+# Modules: _$(SSIM).so _$(GOBJ).so Makefile
+#	echo "Modules have been built"
 
 Modules: _$(SSIM).so Makefile
 	echo "Modules have been built"
@@ -84,7 +91,13 @@ _$(SSIM).so: $(FPPU) $(OBJU) Makefile
 	f2py-f90wrap --fcompiler=$(FC) -c -m _$(SSIM) $(OBJU) f90wrap_*.f90 1>f2py_SurveySubs.log 2>&1
 	\rm f90wrap_*.f90
 	\rm *.fpp *.mod *.o
-	sed -e 's/import _$(SSIM)/from . import _$(SSIM)/' -i.bck $(SSIM).py
-	rm $(SSIM).py.bck
-	rm .f2py_f2cmap
 	mv _$(SSIM)*.so _$(SSIM).so
+
+_$(GOBJ).so: link $(FPPM) $(OBJM) $(FPPA) $(OBJA) _$(SSIM).so $(GIMEOBJ).f95 Makefile
+	\rm -f _$(GOBJ).so
+	f90wrap -k kind_map -m $(GOBJ) $(FPPM) $(FPPA) 1>f90wrap_GiMeObj.log 2>&1
+	f2py-f90wrap --fcompiler=$(FC) -c -m _$(GOBJ) $(OBJA) $(OBJM) f90wrap_*.f90 1>f2py_GiMeObj.log 2>&1
+	\rm GiMeObj.f95 gimeobjut.mod GiMeObj.o GiMeObj.fpp
+	\rm f90wrap_*.f90
+	mv _$(GOBJ)*.so _$(GOBJ).so
+

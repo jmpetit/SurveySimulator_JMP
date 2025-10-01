@@ -1,15 +1,20 @@
-program Driver
+program DriverPop
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 !
-! File Driver.f95
+! File DriverPop.f95
 !
 ! J.-M. Petit  Observatoire de Besac
 ! Version 1:  May 2013
+! Version 2:  April 2023
 !
 ! The purpose of this program is to compare models of the Kuiper Belt to
 ! reality by actually comparing what the surveys (say CFEPS or OSSOS)
 ! would have found if the model was a good representation of the real
 ! world, to the objects that were actually found.
+!
+! This version of the Driver will also write a file to compute the calibrated
+! population at a given H mag by running 'n_pop' times the detection of 'n_real'
+! simulated detections
 !
 ! The workflow of the survey simulator driver is as follows:
 !
@@ -33,7 +38,7 @@ program Driver
 ! that you may add to the driver. Please use logical unit numbers
 ! starting from 20.
 !
-! As currently written, the driver includes a file 'GiMeObj.f'
+! As currently written, the driver module 'gimeobjut'
 ! containing the definition of the model. The correct way to use this
 ! feature is to have one's GiMeObj routine in a file <whatever.f> and
 ! create a symobolic link: 
@@ -50,15 +55,15 @@ program Driver
   implicit none
 
   integer, parameter :: n_obj_max = 10000, screen = 6, keybd = 5, verbose = 9
-  integer :: lun_h, lun_t
+  integer :: lun_h, lun_t, lun_p
   type(t_orb_m) :: o_m
 ! color array NEEDS to be length 10 or more!
   real (kind=8) :: h, epoch, m_int, d_ra, d_dec, r, delta, ra, dec, random, &
        mt, color(10), gb, ph, period, amp, jday_p, m_rand, eff, rn_iter, &
-       eff_lim, h_rand
-  integer :: n_hits, n_track, ierr, seed, flag, isur, ic, n_iter, &
-       n_track_max, nchar, values(8), c_idx, i1, i2
-  character(80) :: distri_file, trk_outfile, det_outfile, line
+       rn0, eff_lim, h_rand, h_pop, rn_i_h
+  integer :: n_hits, n_track, n_h_h, n_t_h, n_i_h, ierr, seed, flag, isur, ic, &
+       n_iter, n_track_max, nchar, values(8), i1, i2, nh0, nt0, n_real, n_pop
+  character(80) :: distri_file, trk_outfile, det_outfile, pop_outfile, line
   character(100) :: survey_dir, comments
   character(10) :: surna, time
   character(8) :: date
@@ -67,13 +72,20 @@ program Driver
 
   lun_h = 10
   lun_t = 11
+  lun_p = 12
   keep_going = .true.
 
 ! Get arguments
 ! Seed for random number generator
   read (5, *, err=9999) seed
-! Maximum number of detections (>0) or -maximum number of trials (<0)
-  read (5, *, err=9999) n_track_max
+! Number of real detections
+  read (5, *, err=9999) n_real
+! Number of times we draw 'n_real' detections
+  read (5, *, err=9999) n_pop
+  n_real = abs(n_real)
+  n_track_max = n_pop*n_real
+! H value at which we want the population estimate
+  read (5, *) h_pop
 ! Directory containing the characterization files
   read (5, '(a)', err=9999) survey_dir
   survey_dir = strip_comment(survey_dir)
@@ -86,12 +98,16 @@ program Driver
 ! Name for the tracked objects outfile
   read (5, '(a)', err=9999) trk_outfile
   trk_outfile = strip_comment(trk_outfile)
+! Name for the population outfile
+  read (5, '(a)', err=9999) pop_outfile
+  pop_outfile = strip_comment(pop_outfile)
 
-!  print *, n_track_max
+!  print *, n_real, n_pop, n_track_max, h_pop
 
 ! Open output files and write header
   open (unit=lun_h, file=det_outfile, status='new', err=9500)
   open (unit=lun_t, file=trk_outfile, status='new', err=9501)
+  open (unit=lun_p, file=pop_outfile, status='new', err=9504)
 
 ! copy header of model file into trk and detect files
   open (unit=90, file=distri_file, status='old', err=9503)
@@ -102,6 +118,7 @@ program Driver
      if (index(line, 'peri') .eq. 0) then 
         write(lun_t, '(a)') line
         write(lun_h, '(a)') line
+        write(lun_p, '(a)') line
      endif
      goto 222
   endif
@@ -124,8 +141,6 @@ program Driver
        '    mrand    color flag m_int    H_rand    eff   RA(H)  ', &
        '   DEC    Surv. Comments'
 
-
-  
   write (lun_t, '(a17,a23,2x,a5)') '# Creation time: ', &
        date(1:4)//'-'//date(5:6)//'-'//date(7:8)//'T'  &
        //time(1:2)//':'//time(3:4)//':'//time(5:10), zone
@@ -133,11 +148,24 @@ program Driver
        '#   a           e        i      Node     peri       M       H_int     ', &
        '   q      r       delta  m_rand h_rand color Comments'
 
+  write (lun_p, '(a17,a23,2x,a5)') '# Creation time: ', &
+       date(1:4)//'-'//date(5:6)//'-'//date(7:8)//'T'  &
+       //time(1:2)//':'//time(3:4)//':'//time(5:10), zone
+  write (lun_p, '(a31,f5.2)') '# Population estimate to H_r = ', h_pop
+  write (lun_p, '(a)') '#  n_pop      n_det     n_trk'
+
 ! Initialize counters
   n_hits = 0
   n_track = 0
   n_iter = 0
-  rn_iter = 0.d0
+  rn_iter = 0.0d0
+  n_h_h = 0
+  n_t_h = 0
+  n_i_h = 0
+  rn_i_h = 0.0d0
+  rn0 = 0.d0
+  nh0 = 0
+  nt0 = 0
 
 ! Open and read in object distribution
 100 continue
@@ -161,14 +189,6 @@ program Driver
         keep_going = .false.
      end if
 
-!        Count number of iterations; may exceed 2**31, so use a real*8 helper
-     n_iter = n_iter + 1
-     if (n_iter .gt. 2000000000) then
-        rn_iter = rn_iter + dble(n_iter)
-        n_iter = 0
-        if (rn_iter .ge. 9.d9) goto 2000
-     end if
-
 !        Determine if the object would be detected
      call Detos1 (o_m, epoch, h, color, gb, ph, period, amp, survey_dir, seed, &
           flag, ra, dec, d_ra, d_dec, r, delta, m_int, m_rand, eff, isur, mt, &
@@ -179,12 +199,29 @@ program Driver
          goto 2011
      end if
 
+!        Count number of iterations; may exceed 2**31, so use a real*8 helper
+     n_iter = n_iter + 1
+     if (n_iter .gt. 2000000000) then
+        rn_iter = rn_iter + dble(n_iter)
+        n_iter = 0
+        if (rn_iter .ge. 9.d9) goto 2000
+     end if
+! Count number of iterations with H <= H_pop
+     if (h .le. h_pop) n_i_h = n_i_h + 1
+     if (n_i_h .gt. 2000000000) then
+        rn_i_h = rn_i_h + dble(n_i_h)
+        n_i_h = 0
+        if (rn_i_h .ge. 9.d9) goto 2000
+     end if
+
 !        Check if detected and tracked, and write to output files
      if (flag .gt. 0) then
 
 !        m_int and h are in "x" band (filter of object creation)
 !        m_rand and h_rand are in discovery filter
         n_hits = n_hits + 1
+! Number of detections that are bright enough
+        if (h .le. h_pop) n_h_h = n_h_h + 1
         write (lun_h, 9000) o_m%a, o_m%e, o_m%inc/drad, o_m%node/drad, &
              o_m%peri/drad, o_m%m/drad, h, &
              o_m%a*(1.d0-o_m%e), r, delta, &
@@ -197,13 +234,22 @@ program Driver
                 o_m%peri/drad, o_m%m/drad, h, &
                 o_m%a*(1.d0-o_m%e), r, delta, &
                 m_rand, h_rand, color(ic), comments(1:nchar)
-
+! Number of tracked objects that are bright enough
+           if (h .le. h_pop) then
+              n_t_h = n_t_h + 1
+              if (mod(n_t_h, n_real) .eq. 0) then
+                 write (lun_p, *) rn_i_h + dble(n_i_h) - rn0, &
+                      n_h_h - nh0, n_t_h - nt0
+                 rn0 = rn_i_h + dble(n_i_h)
+                 nh0 = n_h_h
+                 nt0 = n_t_h
+              end if
+           end if
         end if
      end if
 
 ! Should we continue ?
-     if (((n_track_max .gt. 0) .and. (n_track .ge. n_track_max)) .or. &
-          ((n_track_max .lt. 0) .and. (n_iter .ge. -n_track_max))) then
+     if (n_t_h .ge. n_track_max) then
         keep_going = .false.
      end if
      goto 100
@@ -216,8 +262,15 @@ program Driver
        rn_iter + dble(n_iter)
   write (lun_h, '(''# Number of detections:      '', i7)') n_hits
   write (lun_h, '(''# Number of tracked objects: '', i7)') n_track
+  write (lun_h, '(''#'')')
+  write (lun_h, '(''# For objects brighter than Hr = '',f5.2)') h_pop
+  write (lun_h, '(''# Total number of objects:   '', f11.0)') &
+       rn_i_h + dble(n_i_h)
+  write (lun_h, '(''# Number of detections:      '', i7)') n_h_h
+  write (lun_h, '(''# Number of tracked objects: '', i7)') n_t_h
   close (lun_h)
   close (lun_t)
+  close (lun_p)
 
   call exit (0)
 
@@ -238,9 +291,13 @@ program Driver
   goto 9502
 
 9502 continue
-  write (screen, *) 'Make sure "', det_outfile, '" and "', trk_outfile, &
-       '" do not exist and restart SurveySimulator.'
+  write (screen, *) 'Make sure "', det_outfile, '", "', trk_outfile, &
+       '" and "', pop_outfile, '" do not exist and restart SurveySimulator.'
   call exit(-1)
+
+9504 continue
+  write (screen, *) 'File %%% "', pop_outfile, '" already exists. '
+  goto 9502
 
 9999 continue
   write (screen, *) 'Usage: SurveySimulator < input'
@@ -265,13 +322,13 @@ program Driver
 
   call exit(0)
 
-  2010 continue
+2010 continue
   write (lun_h,*) "# Failed while loading objects from "//distri_file
   call exit(-20)
 
-  2011 continue
+2011 continue
   write (lun_h,*) "# Failed while loading survey information "
   call exit(-20)
 
 
-end program Driver
+end program DriverPop
