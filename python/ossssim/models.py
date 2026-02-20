@@ -402,7 +402,7 @@ class ModelFile(Iterable):
 
     @property
     def f(self):
-        """True anomaly of the orbit.  If the mean anomaly at detection (Mt) exists than use that
+        """True anomaly of the orbit.  If the mean anomaly at detection (Mt) exists then use that
         else use the mean anomaly at model epoch
 
         Returns:

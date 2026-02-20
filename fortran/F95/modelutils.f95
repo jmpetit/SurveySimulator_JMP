@@ -1,5 +1,6 @@
 module modelutils
-  implicit none
+
+  use datadec
 
   interface
      function func(nparam, param, inc)
@@ -54,7 +55,7 @@ contains
     integer (kind=4), intent(in) :: nparam, dist
     integer (kind=4), intent(inout) :: seed
     integer (kind=4), intent(out) :: ierr
-    real (kind=8), intent(in) :: param(20), incmin, incmax
+    real (kind=8), intent(in) :: param(nparmax), incmin, incmax
     real (kind=8), intent(out) :: inc
     type(func_holder), intent(in) :: func
     integer :: i, ilo, ihi, di

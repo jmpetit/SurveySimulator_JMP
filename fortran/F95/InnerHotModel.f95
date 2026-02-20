@@ -212,7 +212,7 @@ contains
          q,                     &! Perihelion distance
          qmin,                  &! Lower limit of q distribution
          qmax,                  &! Upper limit of q distribution
-         param(10),             &! Temporary storage for distribution parameters
+         param(nparmax),        &! Temporary storage for distribution parameters
          random,                &! Random number
          r,                     &! Distance of object to Sun
          color0(10)              ! Color parameters of model

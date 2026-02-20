@@ -31,8 +31,11 @@ The primary contact for the Survey Simulator code is:
 ### Acknowledgement
   
 
+Cite **Petit, J.-M., et al., AJ, Vol 142 ID 131 (2011)** and **Lawler, S. M. et
+al., FrASS, Vol 5 ID 14 (2018)** if you make use of the SurveySimulator.
+
 Cite **Petit, J.-M., et al., AJ, Vol 142 ID 131 (2011)** if you make 
-use of the SurveySimulator, or the CFEPS L7SyntheticModel-v09 Kuiper belt model.
+use of the CFEPS L7SyntheticModel-v09 Kuiper belt model.
 
 If you make use of the Survey characterizations and detections please cite
 the appropriate survey paper:  

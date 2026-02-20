@@ -1,4 +1,4 @@
-U	= poly_dec poly_lib datadec ioutils effut elemutils rot xvutils getsur numutils surveysub 
+U	= poly_dec poly_lib datadec ioutils effut elemutils rot DE_size DE_const DE_ephhdr DE_chrhdr DE_utils xvutils getsur numutils surveysub
 #U	= poly_lib effut getsur numutils surveysub
 OBJU	= $(addsuffix .o,${U})
 SRCU	= $(addsuffix .f95,${U})
@@ -30,18 +30,10 @@ FFLAGP	= -O3
 CFLAGS  = 
 CPPFLAGS = 
 
-SUBDIRS := example
 TOPTARGETS := clean test
-GIMEOBJ ?= InnerBeltModel
+GIMEOBJ ?= InnerHotModel
 
-$(TOPTARGETS): $(SUBDIRS)
-
-.PHONY: $(SUBDIRS) 
-
-$(SUBDIRS):
-	$(MAKE) -C $@ $(MAKECMDGOALS)
-
-all:	Driver $(SUBDIRS)
+all:	Driver
 
 %.fpp :	%.f95
 	$(FPP) $< -o $@
@@ -91,6 +83,9 @@ _$(SSIM).so: $(FPPU) $(OBJU) Makefile
 	f2py-f90wrap --fcompiler=$(FC) -c -m _$(SSIM) $(OBJU) f90wrap_*.f90 1>f2py_SurveySubs.log 2>&1
 	\rm f90wrap_*.f90
 	\rm *.fpp *.mod *.o
+	sed -e 's/import _$(SSIM)/from . import _$(SSIM)/' -i.bck $(SSIM).py
+	rm $(SSIM).py.bck
+	rm .f2py_f2cmap
 	mv _$(SSIM)*.so _$(SSIM).so
 
 _$(GOBJ).so: link $(FPPM) $(OBJM) $(FPPA) $(OBJA) _$(SSIM).so $(GIMEOBJ).f95 Makefile
