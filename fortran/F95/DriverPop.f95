@@ -62,7 +62,8 @@ program DriverPop
        mt, color(10), gb, ph, period, amp, jday_p, m_rand, eff, rn_iter, &
        rn0, eff_lim, h_rand, h_pop, rn_i_h
   integer :: n_hits, n_track, n_h_h, n_t_h, n_i_h, ierr, seed, flag, isur, ic, &
-       n_iter, n_track_max, nchar, values(8), i1, i2, nh0, nt0, n_real, n_pop
+       n_iter, n_track_max, nchar, values(8), i1, i2, nh0, nt0, n_real, n_pop, &
+       seed_mod, seed_sim
   character(80) :: distri_file, trk_outfile, det_outfile, pop_outfile, line
   character(100) :: survey_dir, comments
   character(10) :: surna, time
@@ -78,6 +79,8 @@ program DriverPop
 ! Get arguments
 ! Seed for random number generator
   read (5, *, err=9999) seed
+  seed_sim = seed + 2
+  seed_mod = seed
 ! Number of real detections
   read (5, *, err=9999) n_real
 ! Number of times we draw 'n_real' detections
@@ -175,8 +178,8 @@ program DriverPop
 
 !        Select object.
      nchar = 0
-     call GiMeObj (distri_file, seed, o_m, epoch, h, color, gb, ph, period, &
-          amp, comments, nchar, ierr)
+     call GiMeObj (distri_file, seed_mod, o_m, epoch, h, color, gb, ph, &
+          period, amp, comments, nchar, ierr)
 
 !     print *, o_m, epoch
 
@@ -190,9 +193,9 @@ program DriverPop
      end if
 
 !        Determine if the object would be detected
-     call Detos1 (o_m, epoch, h, color, gb, ph, period, amp, survey_dir, seed, &
-          flag, ra, dec, d_ra, d_dec, r, delta, m_int, m_rand, eff, isur, mt, &
-          jday_p, ic, surna, h_rand, ierr)
+     call Detos1 (o_m, epoch, h, color, gb, ph, period, amp, survey_dir, &
+          seed_sim, flag, ra, dec, d_ra, d_dec, r, delta, m_int, m_rand, eff, &
+          isur, mt, jday_p, ic, surna, h_rand, ierr)
 
      if (ierr < 0) then
          write(screen, *) "Failed while attempting to determine if object is detectable: ", ierr

@@ -57,7 +57,7 @@ program Driver
        mt, color(10), gb, ph, period, amp, jday_p, m_rand, eff, rn_iter, &
        eff_lim, h_rand
   integer :: n_hits, n_track, ierr, seed, flag, isur, ic, n_iter, &
-       n_track_max, nchar, values(8), c_idx, i1, i2
+       n_track_max, nchar, values(8), c_idx, i1, i2, seed_mod, seed_sim
   character(80) :: distri_file, trk_outfile, det_outfile, line
   character(100) :: survey_dir, comments
   character(10) :: surna, time
@@ -72,6 +72,8 @@ program Driver
 ! Get arguments
 ! Seed for random number generator
   read (5, *, err=9999) seed
+  seed_sim = seed + 2
+  seed_mod = seed
 ! Maximum number of detections (>0) or -maximum number of trials (<0)
   read (5, *, err=9999) n_track_max
 ! Directory containing the characterization files
@@ -147,8 +149,8 @@ program Driver
 
 !        Select object.
      nchar = 0
-     call GiMeObj (distri_file, seed, o_m, epoch, h, color, gb, ph, period, &
-          amp, comments, nchar, ierr)
+     call GiMeObj (distri_file, seed_mod, o_m, epoch, h, color, gb, ph, &
+          period, amp, comments, nchar, ierr)
 
 !     print *, o_m, epoch
 
@@ -170,9 +172,9 @@ program Driver
      end if
 
 !        Determine if the object would be detected
-     call Detos1 (o_m, epoch, h, color, gb, ph, period, amp, survey_dir, seed, &
-          flag, ra, dec, d_ra, d_dec, r, delta, m_int, m_rand, eff, isur, mt, &
-          jday_p, ic, surna, h_rand, ierr)
+     call Detos1 (o_m, epoch, h, color, gb, ph, period, amp, survey_dir, &
+          seed_sim, flag, ra, dec, d_ra, d_dec, r, delta, m_int, m_rand, eff, &
+          isur, mt, jday_p, ic, surna, h_rand, ierr)
 
      if (ierr < 0) then
          write(screen, *) "Failed while attempting to determine if object is detectable: ", ierr

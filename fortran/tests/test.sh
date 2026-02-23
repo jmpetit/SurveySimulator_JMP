@@ -25,16 +25,13 @@ fi
 first_detect_line=$(grep -v "^#" SimulDetect.dat | head -1)
 a=`echo ${first_detect_line} | awk '{print $1}'`
 H_col=7
-if [ $language == "F77" ]; then
-   H_col=15
-fi
 s=`echo ${first_detect_line} | awk '{print $'${H_col}'}'`
 no=`tail -3 SimulDetect.dat | head -1 | awk '{printf "%10d", $6}'`
 nd=`tail -2 SimulDetect.dat | head -1 | awk '{print $5}'`
 nt=`tail -1 SimulDetect.dat | awk '{print $6}'`
 first_check_line=$(grep -v "^#" ${cmd}-check-${language}.dat | head -1)
 ac=`echo ${first_check_line} | awk '{print $1}'`
-sc=`echo ${first_check_line} | awk '{print $15}'`
+sc=`echo ${first_check_line} | awk '{print $'${H_col}'}'`
 ndo=`tail -3 ${cmd}-check-${language}.dat | head -1 | awk '{printf "%10d", $6}'`
 ndc=`tail -2 ${cmd}-check-${language}.dat | head -1 | awk '{print $5}'`
 ntc=`tail -1 ${cmd}-check-${language}.dat | awk '{print $6}'`
