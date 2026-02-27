@@ -5,22 +5,16 @@ module gimeobjut
   use rot
   use modelutils
   use ioutils
+  use xvutils
+  use numutils
 
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 ! First define variables so they are accessible from a Python wrapper
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-  real (kind=8) :: lambdaN, epoch_m, inamax, inamin, inimin, inimax
-  common /com_inner/ inamax, inamin, inimin, inimax
-  common /com_time/ epoch_m, lambdaN
-
-! Values for Inner
-!
-  data inamax /39.d0/, inamin /37.d0/, inimin /0.122173047639d0/, inimax /0.349065850398d0/, &
-!
 ! Values of time and planet positions for all models
-!
-       lambdaN /5.489d0/, epoch_m /2453157.5d0/
-
+  real (kind=8) :: lambdaN, epoch_m
+  common /com_time/ epoch_m, lambdaN
+  data lambdaN /5.489d0/, epoch_m /2453157.5d0/
 
 contains
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -39,7 +33,7 @@ contains
 !
 ! where arg_list_1 is
 ! (filena, seed, a, e, inc, node, peri, M, epoch, h, color, gb, ph,
-!  period, amp, comp, ierr)
+!  period, amp, commen, nchar, ierr)
 ! with:
 !
 ! INPUT
@@ -101,19 +95,35 @@ contains
 !
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 !
-! File generated on 2020-04-16
+! File generated on 2023-07-31
 !
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
   subroutine GiMeObj (filena, seed, o_m, epoch, h, color, gb, ph, period, &
        amp, commen, nchar, ierr)
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-! This routine generates an object from a model stored in a file.
+! This routine generates an object from a model parametric model of the
+! inner population.
+!
+! Version 1.0 draws (a, q) according to CFEPS model, i according to =hot_inc=
+! distribution with respect to forced reference frame, H distribution is
+! =H_dist_hot_3= with possible knee or divot at some mag.
+!
+! Version 1.1 draws (a, q) according to CFEPS model, i according to Brown
+! distribution with respect to forced reference frame, H distribution is
+! =H_dist_hot_3= with possible knee or divot at some mag.
+!
+! Version 1.2 draws (a, q) according to CFEPS model, i according to Brown
+! distribution with respect to forced reference frame, H distribution is
+! =H_dist_hot_4= with possible knee or divot at some mag.
+!
+! Version 1.3 draws (a, q) according to CFEPS model, i according to Brown
+! distribution with respect to forced reference frame, H distribution is
+! =H_draw_hot_6= with possible knee or divot at some mag.
+!
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 !
 ! J-M. Petit  Observatoire de Besancon
-! Version 1 : May 2013
-! Version 2 : April 2020
-!             Upgrade to Fortran 95 syntax
+! Version 1.0 : July 2023
 !
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 ! INPUT
@@ -150,18 +160,25 @@ contains
 !                -20 : something went grossly wrong, should quit
 !
 ! The user can fill the 100-character 'commen' string any way they
-! wish; this comment string will be printed in the driver on the output
+! wish; this comment string will be printed by the driver on the output
 ! line of each detection.  Examples of the comment might be resonance name
 ! and libration amplitude, or the name of a component in the GiMeObj model
-! that the object responds to.  The nchar variable (passed back to Driver)
-! allows the user to pring only the first nchar characters of this string.
+! that the object responds to. The nchar variable (passed back to Driver)
+! allows the user to print only the first nchar characters of this string.
 !
 ! This routine uses logical unit 10 to access the file containing the model.
 !
+! The model uses the following indices in incdism to define the various
+! distributions. Remember that only indices from 1 to 10 are allowed.
+!    1:
+!    2:
+!    3:
+!    4:
+!    8:
+!    9:
+!   10:
+!
 !-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-!
-! Set of F2PY directive to create a Python module
-!
 !f2py intent(in) filena
 !f2py intent(in,out) seed
 !f2py intent(out) o_m
@@ -186,8 +203,6 @@ contains
     character(100), intent(out) :: commen
 
 ! Some values better set up as parameters
-    type(t_v3d) :: p
-    type(func_holder) :: fp
     integer, parameter :: &
          lun_m = 20,            &! Logical unit number for data file reading
          lun_ll = 21             ! Logical unit number for logging
@@ -197,6 +212,8 @@ contains
          drad = Pi/180.0d0       ! Degree to radian convertion: Pi/180
 
 ! Internal storage
+    type(t_v3d) :: p, opos, ovel
+    type(func_holder) :: fp
     character(5) :: zone         ! Time zone
     character(8) :: date         ! Date of execution
     character(10) :: time        ! Time of execution
@@ -204,29 +221,32 @@ contains
          values(8),             &! Date and time of execution
          flag,                  &! Tell invar_ecl_osc which direction to go
          i,                     &! Dummy index
+         comp,                  &! Index of the component
+         n_h,                   &! Number of parameters for H distributions
+         nlog,                  &! Number of objects to log
+         nlogged,               &! Number of objects already logged
          nparam                  ! Number of parameters for the function called
                                  ! by routine incdism
     real (kind=8), save :: &
-         brown_params(5),       &! Parameters for the inclination distribution
-         h_params(6),           &! Parameters for the H distribution
+         hcut,                  &! Largest Hx value in model
+         h_params(60),          &! Parameters for the H distribution
+         inc_f, node_f, peri_f, &! Free inclination and node and arg of peri
+         i_ref, om_ref,         &! Coordinates of forced plane
+         param(50),             &! Temporary storage for distribution parameters
          q,                     &! Perihelion distance
-         qmin,                  &! Lower limit of q distribution
-         qmax,                  &! Upper limit of q distribution
-         param(nparmax),        &! Temporary storage for distribution parameters
          random,                &! Random number
          r,                     &! Distance of object to Sun
-         color0(10)              ! Color parameters of model
-    logical, save :: &
-         hot,                   &! Is this the hot component ?
-         first,                 &! Tells if first call to routine
-         log                     ! True if we want to log data
-    real (kind=8) :: &
-         inamax,                &! Lower "a" bound of inner belt
-         inamin,                &! Larger "a" bound of inner belt
+         colorH(10),            &! Color parameters of model for hot component
+         ra, dec,               &!
+         delta, or, mag, alpha, &!
          inimin,                &! Lower limit of secular instability zone
          inimax,                &! Upper limit of secular instability zone
-         incmin,                &! Lower limit of inclination distribution
-         incmax,                &! Upper limit of inclination distribution
+         beta_ah,               &! Index of the a distribution
+         ah_min, ah_max,        &! Lower and upper limit of a distribution
+         a0sl, a1sl              ! Intermediate values for a distribution
+    logical, save :: &
+         first                   ! Tells if first call to routine
+    real (kind=8) :: &
          epoch_m,               &! Epoch of elements [JD]
          lambdaN                 ! Longitude of Neptune at epoch
 ! Lightcurve and opposition surge effect parameters
@@ -234,13 +254,12 @@ contains
 
 ! Place some variables in common block so they can be accessed directly
 ! by a Python program.
-    common /com_inner/ inamax, inamin, inimin, inimax
     common /com_time/ epoch_m, lambdaN
 
 ! Sets initial values
     data &
          first /.true./,        &! First call
-         gb0     /-0.12d0/,     &! Opposition surge effect
+         gb0     / 0.15d0/,     &! Opposition surge effect
          ph0     / 0.00d0/,     &! Initial phase of lightcurve
          period0 / 0.60d0/,     &! Period of lightcurve
          amp0    / 0.00d0/       ! Amplitude of lightcurve (peak-to-peak)
@@ -248,72 +267,117 @@ contains
 ! This is the first call
     if (first) then
 ! Define the region of the inner belt
-       inamin = 37.d0         ! lowest  value of a (AU)
-       inamax = 39.d0         ! largest value of a
-       qmin   = 34.d0
-       qmax   = 39.d0
-       incmin = 0.d0  *drad
-       incmax = 180.d0*drad
        inimin = 7.d0  *drad   ! This cuts out 7-20 deg inclinations (nu 8)
        inimax = 20.d0 *drad
 ! Reads in other parameters describing the model.
        open (unit=lun_m, file=filena, status='old', err=1000)
-       read (lun_m, *) (h_params(i),i=1,3)     ! Size distribution parameters
-       read (lun_m, *) (brown_params(i),i=1,1) ! Read i distribution width 
-       brown_params(1) = brown_params(1)*drad  ! convert to radians
-       read (lun_m, *) (color0(i),i=1,10)      ! read color array
-       read (lun_m, *) log          ! logical variable, turn on drawing log
+       read (lun_m, *) n_h
+! hot
+       read (lun_m, *) (h_params(i+0*n_h), i=1,n_h)
+       comp = 1
+       read (lun_m, *) (param(comp*10+i),i=1,2)
+       do i = 1, 2
+          param(comp*10+i) = param(comp*10+i)*drad
+       end do
+       comp = 2
+       read (lun_m, *) (param(comp*10+i),i=1,4)
+       read (lun_m, *) beta_ah, ah_min, ah_max
+       a0sl = ah_min**(beta_ah + 1.d0)
+       a1sl = ah_max**(beta_ah + 1.d0)
+       read (lun_m, *) (colorH(i),i=1,10)      ! read color array
+       read (lun_m, *) nlog
        close (lun_m)
 ! Writes a file describing the model that was used.
        open (unit=lun_ll, file='ModelUsed.dat', access='sequential', &
             status='unknown')
-       write (lun_ll, '(a)') &
-            'Inner belt model, version 1.0, 2013-05-14'
+       write (lun_ll, '(a)') '# Inner population model.'
+       write (lun_ll, '(a)') '# Version OSSOS 8.1, 2023-07-31'
        call date_and_time(date, time, zone, values)
        write (lun_ll, '(a17,a23,2x,a5)') '# Creation time: ', &
             date(1:4)//'-'//date(5:6)//'-'//date(7:8)//'T' &
             //time(1:2)//':'//time(3:4)//':'//time(5:10), zone
        write (lun_ll, '(''#'')')
-       write (lun_ll, '(a,3(1x,f6.2))') &
-            '# H limits and slope for cold:', (h_params(i),i=1,3)
-       write (lun_ll, '(a,3(1x,f6.2))') &
-            '# H limits and slope for hot: ', (h_params(i),i=4,6)
-       write (lun_ll, '(a,3(1x,f6.2))') &
-            '# Width of cold, warm and hot:', (brown_params(i),i=1,3)
+       write (lun_ll, '(a,10(1x,f5.2))') &
+            '# Colors for hot: ', (colorH(i),i=1,10)
        write (lun_ll, '(''#'')')
+       comp = 1
+       write (lun_ll, '(a,2(1x,f5.2))') &
+            '# Parameters for inclination distribution: ', &
+            (param(comp*10+i)/drad, i=1,2)
+       comp = 2
+       write (lun_ll, '(a,4(1x,f5.2))') &
+            '# Parameters for q distribution: ', &
+            (param(comp*10+i), i=1,4)
+       write (lun_ll, '(a,3(1x,f6.2))') &
+            '# Parameters for a distribution: ', &
+            beta_ah, ah_min, ah_max
+       write (lun_ll, '(''#'')')
+       write (lun_ll, '(a,4(1x,f5.2))') &
+            '# Hot H-dist. parameter:          ', (h_params(i+0*n_h), i=1,n_h)
+       write (lun_ll, '(''#'')')
+       write (lun_ll, '(a,a,a,a)') &
+            '#   a        e        i      Omega    omega      M', &
+            '        H      dist   comment     ifree   Omfree ', &
+            '     epoch      omfree     iref   Omref   ', &
+            '   RA        DEC    alpha  mag'
        close (lun_ll)
+       call ObsPos(500, epoch_m, opos, ovel, or, ierr)
+
+       nlogged = 0
+
 ! Change "first" so this is not called anymore
        first = .false.
     end if
+!
+! Only 1 component, inner
+    commen = 'inner_'
+    nchar = 9
+
+!
+! Draw inclination
+1150 continue
+!    nparam = 4
+!    fp%f_ptr => hot_inc
+!    call incdism (seed, nparam, param(10+1), 0.0d0*drad, 50.d0*drad, inc_f, &
+!         1, ierr, fp)
+    nparam = 2
+    fp%f_ptr => offgau
+    call incdism (seed, nparam, param(10+1), 0.0d0*drad, 70.d0*drad, inc_f, &
+         3, ierr, fp)
+! Rejects if inclination in the secular instability zone
+    if ((inc_f .gt. inimin) .and. (inc_f .lt. inimax)) goto 1150
 
 1100 continue
 !
-! Determination of "a" distribution, uniform from a_min to a_max
+! Draw 'a'
     random=ran_3(seed)
-    o_m%a = inamin + (inamax-inamin)*random
+    o_m%a = (a0sl + (a1sl-a0sl)*random)**(1.0d0/(beta_ah+1.0d0))
 !
-! Determination of simple "q" distribution. This is NOT a good algorithm.
-1110 continue
-    random=ran_3(seed)
-    q = qmin + (qmax-qmin)*random
-    if (q .gt. o_m%a) goto 1100 ! q can't exceed a. Redraw another a if so
+! Index of distributions for incdism
+!   1: hot_inc
+!   2: qhot
+!   3: offgau
+!   4: h_dist_hot_4
+!
+! Draw 'q'
+    nparam = 4
+    fp%f_ptr => qhot
+    call incdism (seed, nparam, param(20+1), 33.0d0, ah_max, q, &
+         2, ierr, fp)
+! Physical limitaion on q
+    if (q .ge. o_m%a) goto 1100
+! Put in a cut for instability at low q and low i
+    if (q .lt. 37.d0-inc_f/drad*0.2d0) goto 1150
+!
+! Determination of "e"
     o_m%e = 1.d0 - q/o_m%a
-
-1200 continue
-! Determination of "i" distribution. Width was read as brown_params(1)
-    param(1) = brown_params(1)
-    nparam = 1
-! This utitily returns, when there is one parameter, an inc drawn from
-! a sin(i)*gaussian inclination distribution.
-! The 7 below is a unique code assigned to this distribution for speed.
-    fp%f_ptr => onecomp
-    call incdism (seed, nparam, param, incmin, incmax, o_m%inc, &
-         7, ierr, fp)
-    commen = 'h-inner'
-    nchar = 7
 !
-! Rejects if inclination in the secular instability zone
-    if ((o_m%inc .gt. inimin) .and. (o_m%inc .lt. inimax)) goto 1200
+! H-mag distribution: Exponential cutoff and broken exponential law
+! Also set colors for object
+    h = H_draw_hot_6(seed, n_h, h_params(0*n_h+1))
+    do i = 1, 10
+       color(i) = colorH(i)
+    end do
 !
 ! Angles: uniform distribution on allowable values
     random=ran_3(seed)
@@ -323,9 +387,6 @@ contains
     random=ran_3(seed)
     o_m%m = random*TwoPi
 !
-! H-mag distribution: exponential law
-    h = size_dist_one(seed, h_params)
-
 ! Set up epoch for orbial elements
     epoch = epoch_m
 
@@ -334,35 +395,38 @@ contains
     ph = ph0
     period = period0
     amp = amp0
-
-! Get colors for object
-    do i = 1, 10
-       color(i) = color0(i)
-    end do
-
-! The model above gives orbital elements with respect to the invariable
-! plane reference frame (inclination 1$^\circ$ 35 13. 86 with respect to
-! J2000 ecliptic plane with direction of ascending node at
-! 107$^\circ$ 36 30. 8).
+!
+! The model above gives orbital elements with respect to the forced
+! plane reference frame (orientation depending on 'a')
 ! The survey simulator expects the orbital elements with respect to the
 ! ecliptic, so convert them.
+    o_m%inc = inc_f
+    node_f = o_m%node
+    peri_f = o_m%peri
+    call forced_plane_damp(o_m%a, inc_f/drad, i_ref, om_ref)
     flag = 1
-    call invar_ecl_osc (flag, o_m, o_m, ierr)
-
+    call ref_ecl_osc (flag, o_m, o_m, i_ref*drad, om_ref*drad, ierr)
+!
 ! Store object if user requested
 ! Normally, we should explicitly open a file and write to its end, it
 ! seems like the pointer to the file is not retained from one call to
 ! the other, so simply use the default file assigned to the logical
 ! unit. In this case, the output file will be something like "fort.11"
-    if (log) then
+    if ((nlog .lt. 0) .or. (nlogged .lt. nlog)) then
        call pos_cart(o_m, p)
-       r = sqrt(p%x*p%x + p%y*p%y + p%z*p%z)
+       call DistSunEcl(epoch, p, r)
+       call RADECeclXV(p, opos, delta, ra, dec)
+       call AppMag(r, delta, or, h, gb, alpha, mag, ierr)
        open (unit=lun_ll, file='ModelUsed.dat', access='append', &
             status='old')
        write(lun_ll,101) o_m%a, o_m%e, o_m%inc/drad, o_m%node/drad, &
-            o_m%peri/drad, o_m%m/drad, h, r, commen(1:nchar)
+            o_m%peri/drad, o_m%m/drad, h, sqrt(r*delta), commen(1:nchar), &
+            inc_f/drad, node_f/drad, epoch, peri_f/drad, &
+            i_ref, om_ref, ra/drad, dec/drad, alpha/drad, mag
        close (lun_ll)
-101    format(6(f8.4,1x),f6.2,1x,f8.4,1x,a)
+101    format(f9.4,1x,5(f8.4,1x),f6.2,1x,f9.4,1x,a9,2(1x,f8.4), &
+            1x,f13.5,3(1x,f8.4),1x,f9.5,1x,f9.5,1x,f5.2,1x,f5.2)
+       nlogged = nlogged + 1
     end if
 
 ! Prepare return code
