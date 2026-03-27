@@ -2,17 +2,41 @@
 #
 # All lines starting with '#' are ignored, so they are used for comments
 #
-# Each data line has the format:
-# <width> <height> <RA> <DEC> <epoch> <filling_factor> \
+# Each data record can have any of the following formats.
+# - it can be on 1 single line of format:
+# [rect] <width> <height> <RA> <DEC> <epoch> <filling_factor> \
 #   <obs_code> <efficiency_file_name>
 #
+# [rect]: optional, indicates this is a rectangular field
 # <width>: width of FOV, in degree
 # <height>: height of FOV, in degree
+#
+# - or on a signle line of format:
+# ears <RA> <DEC> <epoch> <filling_factor> \
+#   <obs_code> <efficiency_file_name>
+#
+# ears: indicates that the fields of view is a CFHT FoV, with the full 40-CCD
+#       camera with side extensions
+#
+# - or it can be spread over N+1 lines of format:
+# poly <N> <RA> <DEC> <epoch> <filling_factor> \
+#   <obs_code> <efficiency_file_name>
+# followed by N lines of format:
+# <rel_ra> <rel_dec>
+#
+# poly: means we are giving the vertices of a polygon of N sides, as offsets
+#       with respect to <RA>, <DEC>
+# <N>: number of vertices or sides of the polygon
+# <rel_ra>: longitude offset of the vertex with respect to <RA>
+# <rel_dec>: latitude offset of the vertex with respect to <DEC>
+#
+# And the common parameters are:
+#
 # <RA>: Right Ascension of pointing, decimal degree or HH:MM:SS[.ss...]
 # <DEC>: Declination of pointing, decimal degree or DD:MM:SS[.ss...]
 # <epoch>: epoch of pointing, in Julian day (decimal)
 # <filling_factor>: filling factor of that FOV
-# <obs_code>: observatory code
+# <obs_code>: observatory code, or name of a CSV file
 # <efficiency_file_name>: name of efficiency file for that pointing
 #
 # Only one block in the HST search
